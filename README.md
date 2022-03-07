@@ -9,7 +9,8 @@ Describir las diferencias en la velocidad promedio de los ganadores múltiples d
 
 ![alt text](https://i.imgur.com/ZiG1ZGE.png)
   <h6>Comparación material de la bicileta<h6/>
-  ![alt text](https://i.imgur.com/LwZfLvj.png)  
+    
+![alt text](https://i.imgur.com/LwZfLvj.png)  
     
 
 
