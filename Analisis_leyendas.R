@@ -1,0 +1,133 @@
+
+library(nlme) #minimos cuadrados generalizados
+library(lsmeans)
+library(moments)
+library(stats)
+library(car)
+library("rsm")
+library(olsrr)
+library(lmtest)
+require(vcd)
+require(MASS)
+require(agricolae)
+library(nortest)
+library(caret)
+library(multcomp)
+
+leyendas= read.csv(file = 'Leyendas.csv')
+YL=c(leyendas[1:5,1],
+     leyendas[1:5,2],
+     leyendas[1:5,3],
+     leyendas[1:5,4],
+     leyendas[1:7,5],
+     leyendas[1:4,6])
+kmtot_leyendas= read.csv(file = 'kmtleyendas.csv')
+Vel_prom_leyendas=c(leyendas[1:5,1],leyendas[1:5,2],leyendas[1:5,3],leyendas[1:5,4],leyendas[1:7,5],leyendas[1:4,6])
+#facor leyendas
+leyenda_name=c(rep("Anquetil",5),
+               rep("Merckx",5),
+               rep("hinault",5),
+               rep("Indurain",5),
+               rep("Armstrong",7),
+               rep("Froome" ,4))
+leyenda_name=as.factor(leyenda_name)
+library(plotly)
+#análisis descriptivo
+fig_leyenda=plot_ly(y=leyendas[1:5,1],type="box",name="Anquetil")%>%
+  add_trace(y=leyendas[1:5,2],name="Merckx")%>%
+  add_trace(y=leyendas[1:5,3],name="hinault")%>%
+  add_trace(y=leyendas[1:5,4],name="Indurain")%>%
+  add_trace(y=leyendas[1:7,5],name="Armstrong")%>%
+  add_trace(y=leyendas[1:4,6],name="Froome")%>%
+  layout(title="Velocidad leyendas del  tour de francia",
+         xaxis=list(title="Ganadores múltiples"),
+         yaxis=list(title="Velocidad"))
+  
+fig_leyenda
+
+fig_material=plot_ly(y=Vel_prom_leyendas[1:20],type="box",name="Acero")%>%
+  add_trace(y=Vel_prom_leyendas[21:31],name="carbono")%>%
+  layout(title="Cistribución velocidad material bicicletas",
+         xaxis=list(title="material de la bicicleta"),
+         yaxis=list(title="Velocidad"))
+
+fig_material
+
+
+
+KL=kmtot_leyendas
+kmtl=c(KL[1:5,1],KL[1:5,2],KL[1:5,3],KL[1:5,4],KL[1:7,5],KL[1:4,6])
+años=c(1957,1961,1962,1963,1964,
+       1969,1970,1971,1972,1974,
+       1978,1979,1981,1982,1985,
+       1991,1992,1993,1994,1995,
+       1999,2000,2001,2002,2003,2004,2005,
+       2013,2015,2016,2017
+       )
+MB=c(rep("acero",20),
+     rep("carbono",11))
+MB=as.factor(MB)
+
+
+
+
+#modelo nombre leyenda y kilometros totales de la ediión
+modelo_km_name=lm(YL~leyenda_name+kmtl)
+anova(modelo_km_name) 
+
+
+summary(modelo_km_name) #notamos que el material de la bicicleta y los kilometros de la sexta leyenda
+#resultan ser combinación lineal de los demas variables y resultan redundantes
+summary(aov(modelo_km_name)) #notamos que L y kmtl resultan significativos
+Anova(modelo_km_name, type="II")
+
+#medias
+medias=lsmeans(modelo_km_name,~leyenda_name)
+
+tabla.medias <- model.tables(aov(modelo_km_name), type = "mean")
+
+tabla.efectos <- model.tables(aov(modelo_km_name), type = "effects")
+#medias de cada leyenda
+
+media.leyendas <- mean(tabla.medias$tables$leyenda_name) 
+
+
+#diferencias con la gran media
+tabla.medias$tables$leyenda_name - tabla.medias$tables$'Grand mean'
+
+#diferencias de medias
+pairwise.t.test(YL,leyenda_name, p.adj = "bonf")
+
+# verificación de supuestos
+shapiro.test(rstudent( modelo_km_name))
+bptest(modelo_km_name)
+dwtest(modelo_km_name)
+#histograma residuaes
+plot_ly(x=~rstudent( modelo_km_name),
+        type="histogram")
+
+
+plot(modelo_km_name)
+#hesterosedasticidad
+plot_ly(y=~rstudent( modelo_km_name),x=~modelo_km_name$fitted.values)%>%
+  layout(title="residuales vs valores ajustados",
+         xaxis=list(title="valores ajustado"),
+         yaxis=list(tittle="residuales"))
+
+
+
+#ahora hagamos la compración entre el material de las bicicletas
+modelo_mb_km=lm(YL~MB+kmtl)
+summary.aov(modelo_mb_km)
+summary(modelo_mb_km)
+
+shapiro.test(rstudent( modelo_mb_km))
+
+#modelo nolo leyenda
+modelo_name=lm(YL~leyenda_name)
+anova(modelo_km_name,modelo_name)
+shapiro.test(rstudent(modelo_name ))
+
+# criterios de informacióncompración de modelos para explicar la velocidad
+AIC(modelo_mb_km,modelo_km_name,modelo_name)
+BIC(modelo_mb_km,modelo_km_name,modelo_name)
